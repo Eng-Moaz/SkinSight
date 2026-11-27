@@ -1,24 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleAlert, FileImage, Info, LoaderCircle, ShieldCheck, UploadCloud, X } from "lucide-react";
 import { predictImage, validateFile, ApiError } from "../api.js";
+import PhotoPreview from "../components/PhotoPreview.jsx";
 
 const formatSize = (bytes) =>
   bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 
 export default function Upload({ onDone }) {
   const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
-
-  useEffect(() => {
-    if (!file) return undefined;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
 
   // Cancel an in-flight request if the user leaves the page.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -29,7 +22,6 @@ export default function Upload({ onDone }) {
     if (problem) {
       setError(problem);
       setFile(null);
-      setPreview("");
       return;
     }
     setError("");
@@ -38,7 +30,6 @@ export default function Upload({ onDone }) {
 
   const reset = () => {
     setFile(null);
-    setPreview("");
     setError("");
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -109,7 +100,7 @@ export default function Upload({ onDone }) {
           ) : (
             <div className="preview-area">
               <div className="preview-image-wrap">
-                <img src={preview || undefined} alt="Preview of the selected skin photo" />
+                <PhotoPreview file={file} alt="Preview of the selected skin photo" />
               </div>
               <div className="preview-meta">
                 <div className="file-icon"><FileImage size={19} /></div>

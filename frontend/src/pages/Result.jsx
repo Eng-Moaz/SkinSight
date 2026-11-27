@@ -1,23 +1,13 @@
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Check, CircleAlert, ShieldCheck, Stethoscope } from "lucide-react";
 import { LESION_ORDER } from "../lesions.js";
+import PhotoPreview from "../components/PhotoPreview.jsx";
 
 const LOW_CONFIDENCE = 0.5;
 const percent = (v) => `${(v * 100).toFixed(1)}%`;
 const clamp = (v) => Math.min(100, Math.max(0, v * 100));
 
 export default function Result({ analysis, onReset }) {
-  const [photo, setPhoto] = useState("");
-  const file = analysis?.file;
-
-  useEffect(() => {
-    if (!file) return undefined;
-    const url = URL.createObjectURL(file);
-    setPhoto(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
   // Opening /result directly (or refreshing) has no data -> back to upload.
   if (!analysis) return <Navigate to="/upload" replace />;
 
@@ -120,7 +110,7 @@ export default function Result({ analysis, onReset }) {
 
         <aside className="side-column">
           <div className="side-card photo-card">
-            {photo && <img src={photo} alt="The photo you uploaded" />}
+            <PhotoPreview file={analysis.file} alt="The photo you uploaded" />
             <p>Your photo</p>
           </div>
         </aside>

@@ -5,11 +5,17 @@ import { Activity, ArrowUpRight, Info, Menu, X } from "lucide-react";
 export default function Layout() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState(pathname);
 
-  // Scroll to top, close the mobile menu and move focus to the main area on every page change.
+  // Close the mobile menu on every page change.
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setOpen(false);
+  }
+
+  // Scroll to top and move focus to the main area on every page change.
   useEffect(() => {
     window.scrollTo(0, 0);
-    setOpen(false);
     document.getElementById("main")?.focus({ preventScroll: true });
   }, [pathname]);
 
