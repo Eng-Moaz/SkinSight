@@ -1,0 +1,67 @@
+name: Apply
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    concurrency: infrastructure
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Create the infrastructure
+        working-directory: infra/envs/dev
+        run: |
+          terraform init -input=false
+          terraform apply -input=false -auto-approve
+
+      - name: Pass the server IPs to Ansible
+        working-directory: infra/envs/dev
+        run: |
+          terraform output -raw ansible_inventory > ../../ansible/inventory.ini
+          echo "FRONTEND_SG=$(terraform output -raw frontend_sg_id)" >> "$GITHUB_ENV"
+
+      - name: Install Ansible
+        run: pipx install --include-deps --force ansible
+
+      - name: Open SSH for this runner
+        run: |
+          RUNNER_IP=$(curl -4 -fsS https://checkip.amazonaws.com)
+          echo "RUNNER_IP=$RUNNER_IP" >> "$GITHUB_ENV"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$FRONTEND_SG" --protocol tcp --port 22 --cidr "$RUNNER_IP/32"
+
+      - name: Deploy the containers
+        working-directory: infra/ansible
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          eval "$(ssh-agent -s)"
+          echo "$SSH_PRIVATE_KEY" | ssh-add -
+          ansible-playbook playbook.yml
+
+      - name: Close SSH
+        if: always() && env.RUNNER_IP != ''
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$FRONTEND_SG" --protocol tcp --port 22 --cidr "$RUNNER_IP/32"
+
+      - name: Show the app address
+        working-directory: infra/envs/dev
+        run: echo "App is live at $(terraform output -raw app_url)" >> "$GITHUB_STEP_SUMMARY"

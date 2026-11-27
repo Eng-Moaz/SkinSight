@@ -29,3 +29,7 @@ dist/
 # Secrets and OS files
 .env
 .DS_Store
+
+# Ansible and SSH
+infra/ansible/inventory.ini
+*.pem

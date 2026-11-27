@@ -32,3 +32,12 @@ jobs:
 
       - name: Push image
         run: docker push $IMAGE
+
+  deploy:
+    needs: build-and-push
+    if: vars.AUTO_DEPLOY == 'true' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/apply.yml
+    secrets: inherit
