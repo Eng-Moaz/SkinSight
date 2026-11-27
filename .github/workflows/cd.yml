@@ -5,27 +5,30 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  IMAGE: ghcr.io/eng-moaz/skinsight/prediction-service:latest
-
 jobs:
   build-and-push:
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [prediction-service, frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/eng-moaz/skinsight/${{ matrix.service }}:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build image
-        run: docker build -t $IMAGE prediction-service
+        run: docker build -t $IMAGE ${{ matrix.service }}
 
       - name: Push image
         run: docker push $IMAGE
